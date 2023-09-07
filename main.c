@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include "cbmp.h"
 
+/*struct Coordinate {
+  unsigned int x;
+  unsigned int y;
+};*/
+
 //Function to convert pixels of an image to gray-scale
 void binaryImg(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char bin_image[BMP_WIDTH][BMP_HEIGTH]) {
   for (int x = 0; x < BMP_WIDTH; x++) {
@@ -19,6 +24,7 @@ void binaryImg(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], u
   }
 }
 
+// Recursive function which erodes the picture until everything's black
 void erosion(unsigned char bin_image[BMP_WIDTH][BMP_HEIGTH]) {
 
   int pixelCount = 0;
@@ -40,22 +46,70 @@ void erosion(unsigned char bin_image[BMP_WIDTH][BMP_HEIGTH]) {
     }
   }
 
-  // coordinateList(eroded_image);
+  // checkCells(*eroded_image);
   for(int x = 0; x < BMP_WIDTH; x++) {
-        for(int y = 0; y < BMP_HEIGTH; y++) {
-            printf("%d ", eroded_image[y][x]);
-        }
-        printf("\n");
+    for(int y = 0; y < BMP_HEIGTH; y++) {
+      printf("%d ", eroded_image[y][x]);
     }
     printf("\n");
+  }
+  printf("\n");
   if (pixelCount > 0) erosion(eroded_image);
+  // markCells();
   
 }
+/*
 
-  // Declaring the array to store the image (unsigned char = unsigned 8 bit)
-  unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS];
-  unsigned char bin_image[BMP_WIDTH][BMP_HEIGTH];
-  unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS];
+// Function which detects cells before erosion
+// This makes the area to search for cells to be eroded much smaller
+// Can be used to find the center coords as well?
+void detectCell() {
+
+}
+
+// Function that finds and stores the center of cells
+// Pointer to "eroded_image" so values are updated in "erosion()"
+void checkCells(unsigned char *eroded_image[BMP_WIDTH][BMP_HEIGTH]) {
+  for(int x = 0; x < BMP_WIDTH; x++) {
+    for(int y = 0; y < BMP_HEIGTH; y++) {
+      
+      // need a definition for the center
+      if (0) {
+        // Stores the coordinates for the center
+        centerCoords[n] = Coordinate(x,y);
+
+        // Erases the cell from the image
+        eraseCell(eroded_image);
+      }
+
+    }
+  }
+}
+
+// Need to figure out how to use variables as fields
+void markCells() {
+  for(int i = 0; i < centerCoords.length; i++) {  
+    unsigned int x = centerCoords[i].x;
+    unsigned int y = centerCoords[i].y;
+
+    for(int j = -7; j < 8; j++) {
+        output_image[x+i][y+j][0] = 255;
+        output_image[x+i][y+j][1] = 0;
+        output_image[x+i][y+j][2] = 0;
+    }
+  }
+}
+*/
+
+// Declaring the array to store the image (unsigned char = unsigned 8 bit)
+unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS];
+unsigned char bin_image[BMP_WIDTH][BMP_HEIGTH];
+unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS];
+
+// Array of type coordinates which saves the center of every cell
+//unsigned int n = 0;
+//Coordinate centerCoords[3];
+
 
 // Main function
 int main(int argc, char** argv) {
@@ -69,8 +123,6 @@ int main(int argc, char** argv) {
       fprintf(stderr, "Usage: %s <output file path> <output file path>\n", argv[0]);
       exit(1);
   }
-
-  printf("Example program - 02132 - A1\n");
 
   //Load image from file
   read_bitmap(argv[1], input_image);
