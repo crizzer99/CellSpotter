@@ -42,16 +42,59 @@ void erosion(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char erod
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
             temp_image[x][y] = eroded[x][y];
-            printf("%d ", temp_image[x][y]);
+            //printf("%d ", temp_image[x][y]);
         }
-        printf("\n");
+        //printf("\n");
     }
-    printf("\n");
+    //printf("\n");
 }
 
-void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH], int sizeCounter) {
-    
+void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH]) {
+    for(int x = 0; x < BMP_WIDTH; x++) {
+        for(int y = 0; y < BMP_HEIGTH; y++) {
+            if(x >= 4 && x <= BMP_WIDTH-5 && y >= 4 && y <= BMP_HEIGTH-5) {
+                int edge = 0;
+                for(int i = -5; i < 6; i++) {
+                    if(temp_image[x+i][y+5] == 1 || temp_image[x+i][y-5] == 1 || temp_image[x+5][y+i] == 1 || temp_image[x-5][y+1] == 1) {
+                        edge++;
+                    }
+                }
+                if(temp_image[x][y] == 1 && edge == 0) {
+                    cross_coordinates[x][y] = 1;
+                    for(int i = -5; i < 6; i++) {
+                        for(int j = -5; j < 5; j++) {
+                            temp_image[x+i][y+j] = 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
+
+void markCells(unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH], unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS]) {
+    for(int x = 0; x < BMP_WIDTH; x++) {
+        for(int y = 0; y < BMP_HEIGTH; y++) {
+            for(int c = 0; c < BMP_CHANNELS; c++) {
+                output_image[x][y][c] = input_image[x][y][c];
+            }
+        }
+    }
+    for(int x = 0; x < BMP_WIDTH; x++) {
+        for(int y = 0; y < BMP_HEIGTH; y++) {
+            if(cross_coordinates[x][y] == 1) {
+                for(int i = 0; i < 6; i++) {
+                    for(int j = 0; j < 6; j++) {
+                        output_image[x+i][y+j][0] = 255;
+                        output_image[x+i][y+j][1] = 0;
+                        output_image[x+i][y+j][2] = 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 
 
@@ -61,7 +104,6 @@ unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS];
 unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH];
 unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH];
 unsigned char eroded[BMP_WIDTH][BMP_HEIGTH];
-int sizeCounter;
 
 //Main function
 int main(int argc, char** argv)
@@ -87,15 +129,28 @@ int main(int argc, char** argv)
   greyscaleAndBinary(input_image,temp_image);
 
   for(int i = 0; i < 14; i++) {
-    printf("%d iteration: \n", i);
+    printf("%d iteration of erosion done \n", i);
     erosion(temp_image, eroded);
+    printf("%d iteration of check image done \n", i);
+    checkImage(temp_image, cross_coordinates);
+    printf("\n");
   }
 
- 
+int count = 0;
+for(int x = 0; x < BMP_WIDTH; x++) {
+    for(int y = 0; y < BMP_HEIGTH; y++) {
+        if(cross_coordinates[x][y] == 1) {
+            count++;
+        }
+    }
+}
+printf("Amount of detected cells: %d \n", count);
+
+ markCells(cross_coordinates, input_image, output_image);
 
   //Save image to file
-//   write_bitmap(output_image, argv[2]);
+  write_bitmap(output_image, argv[2]);
 
-//   printf("Done!\n");
+  printf("Done!\n");
   return 0;
 }
