@@ -7,21 +7,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <math.h>
 #include "cbmp.h"
 
 // Function which finds best threshold value
-float otsu(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned int channel) {
-    // The "histogram" will be set up in an array containing the amount of every value
-    unsigned int histogramCurve[256];
-
+float otsu(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int startX, int startY, int resolution) {
+    
+    // Total amount of pixels
+    int nPixels = resolution*resolution;
+    // The histogram will be set up in an array containing the amount of every value
+    unsigned int *histogramCurve = calloc(256, sizeof(unsigned int));
+    
     // Here we calculate the amount of values
-    // Histogram is full of ERRORS! sometimes values are waaaay too large 
-    // (a given histogram[x] can at most be = 902.500 if every other histgram[y] = 0, but here values are in multiple millions)
-    // Maybe cause we have to use "malloc" or the likes to allocate more memory
-    for (int x = 0; x < BMP_WIDTH; x++) {
-        for (int y = 0; y < BMP_WIDTH; y++) {
-            unsigned int val = input_image[x][y][channel];
+    for (int x = startX; x < startX+resolution; x++) {
+        for (int y = startY; y < startY+resolution; y++) {
+            unsigned int val = temp_image[x][y];
             histogramCurve[val]++;
         }
     }
@@ -30,37 +29,47 @@ float otsu(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsig
     float prob[256];
     for (int i = 0; i < 256; i++) {
         //printf("histo[%i]: %i\n", i, histogramCurve[i]);
-        prob[i] = ((float) histogramCurve[i])/(BMP_WIDTH*BMP_HEIGTH);
+        prob[i] = ((float) histogramCurve[i])/nPixels;
         //printf("Prob[%i]: %f\n", i, prob[i]);
 
     }
 
-    // Find the cumulative probabilities
-    float cumulProb[256];
-    cumulProb[0] = 0;
-    for (int i = 1; i < 256; i++) {
-        cumulProb[i] = cumulProb[i-1]+prob[i];
-    }
-
-    //printf("cumulProb[255]: %f", cumulProb[255]);
-
-    // Gotta understand this part a little better
     int bestThreshold = 0;
     float maxBetweenClassVar = 0;
 
     for (int threshold = 0; threshold < 256; threshold++) {
-        float meanFore = 0;
-        float meanBack = 0;
+        // amount of pixels in the foreground
+        float pForeground = 0;
+        // amount of pixels in the background
+        float pBackground = 0;
+        // Sum of all values in foreground. used to find mean from division by amount of values
+        unsigned int sumFore = 0;
+        // Sum of all values in background. used to find mean from division by amount of values
+        unsigned int sumBack = 0;
+        //float samples = 0;
 
+        // Amount of pixels in background (?)
         for (int i = 0; i < threshold; i++) {
-            meanBack += i*prob[i];
+            pBackground += histogramCurve[i];
+            sumBack += i*prob[i];
+            //samples += histogramCurve[i];
         }
 
+        // Amount of pixels in foreground (?)
         for (int i = threshold; i < 256; i++) {
-            meanFore += i*prob[i];
+            pForeground += histogramCurve[i];
+            sumFore += i*histogramCurve[i];
         }
 
-        float betweenClassVar = cumulProb[threshold] * (1-cumulProb[threshold]) * pow((meanBack-meanFore), 2);
+        // w0 and w1
+        float weightBackground = pBackground/nPixels;
+        float weightForeground = pForeground/nPixels;
+        // mu0 and mu1
+        float meanBackground = sumBack/pBackground;
+        float meanForeground = sumFore/pForeground;
+
+        // w0*w1*(mu0-mu1)^2
+        float betweenClassVar = weightBackground*weightForeground*(meanBackground-meanForeground)*(meanBackground-meanForeground);
 
         if (betweenClassVar > maxBetweenClassVar) {
             maxBetweenClassVar = betweenClassVar;
@@ -73,27 +82,41 @@ float otsu(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsig
 
 }
 
-
-//Function to invert pixels of an image (negative)
-void greyscaleAndBinary(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]){
-    int threshRed = otsu(input_image,0);
-    int threshGreen = otsu(input_image,1);
-    int threshBlue = otsu(input_image,2);
-
-    printf("red: %f\n green: %f\n blue: %f\n", threshRed, threshGreen, threshBlue);
-
-    int thresh = (int) (threshRed+threshGreen+threshBlue)/3;
-    
-
-    for (int x = 0; x < BMP_WIDTH; x++) {
-        for (int y = 0; y < BMP_HEIGTH; y++) {
-            if((input_image[x][y][0] + input_image[x][y][1] + input_image[x][y][2])/3 >= thresh) {
+void loadParts(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int startX, int startY, int resolution, int thresh) {
+    for (int x = startX; x < startX+resolution; x++) {
+        for (int y = startY; y < startY+resolution; y++) {
+            if(temp_image[x][y] >= thresh) {
                 temp_image[x][y] = 1;
             } else {
                 temp_image[x][y] = 0;
             }
         }
     }
+
+}
+
+
+//Function to invert pixels of an image (negative)
+void binary(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]) {
+
+    // greyscale
+    for (int x = 0; x < BMP_WIDTH; x++) {
+        for (int y = 0; y < BMP_HEIGTH; y++) {
+            temp_image[x][y] = (input_image[x][y][0] + input_image[x][y][1] + input_image[x][y][2])/3;
+        }
+    }
+
+    // Binary
+    int parts = 4;
+    int resolution = BMP_HEIGTH/(parts);
+    for (int i = 0; i < parts; i++) {
+        for (int j = 0; j < parts; j++) {
+            int thresh = (int) otsu(temp_image, i*resolution, j*resolution, resolution);
+            printf("Thresh: %i for pixels [%i;%i] x [%i;%i]\n", thresh, i*resolution, i*resolution+resolution, j*resolution, j*resolution+resolution);
+            loadParts(temp_image, i*resolution, j*resolution, resolution, thresh);
+        }    
+    }
+    
 }
 
 void greyToBmp(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS]) {
@@ -226,7 +249,7 @@ int main(int argc, char** argv)
   read_bitmap(argv[1], input_image);
 
   //Run inversion
-  greyscaleAndBinary(input_image,temp_image);
+  binary(input_image,temp_image);
 
   greyToBmp(temp_image, output_image);
 
