@@ -9,6 +9,9 @@
 #include <time.h>
 #include "cbmp.h"
 
+// Sites used for otsu's method:
+// https://muthu.co/otsus-method-for-image-thresholding-explained-and-implemented/
+// https://en.wikipedia.org/wiki/Otsu%27s_method
 // Function which finds best threshold value
 float otsu(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int startX, int startY, int resolution) {
     
