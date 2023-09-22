@@ -1,8 +1,5 @@
-//To compile (linux/mac): gcc cbmp.c main.c -o main.out -std=c99
-//To run (linux/mac): ./main.out example.bmp example_inv.bmp
-
 //To compile (win): gcc cbmp.c main.c -o main.exe -std=c99
-//To run (win): main.exe example.bmp example_inv.bmp
+//To run (win): main.exe .\samples\easy\2EASY.bmp example_inv.bmp
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -110,12 +107,13 @@ void binary(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsi
     }
 
     // Binary
+    // the actual amount of parts is parts^2, since parts is the amount of parts each dimension is split into
     int parts = 4;
-    int resolution = BMP_HEIGTH/(parts);
+    int resolution = BMP_HEIGTH/parts;
     for (int i = 0; i < parts; i++) {
         for (int j = 0; j < parts; j++) {
             int thresh = (int) otsu(temp_image, i*resolution, j*resolution, resolution);
-            printf("Thresh: %i for pixels [%i;%i] x [%i;%i]\n", thresh, i*resolution, i*resolution+resolution, j*resolution, j*resolution+resolution);
+            //printf("Thresh: %i for pixels [%i;%i] x [%i;%i]\n", thresh, i*resolution, i*resolution+resolution, j*resolution, j*resolution+resolution);
             loadParts(temp_image, i*resolution, j*resolution, resolution, thresh);
         }    
     }
@@ -175,20 +173,25 @@ void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char c
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
             if(temp_image[x][y] == 1) {
-                int edge = 0;
-                for(int i = -6; i <= 7; i++) {  
-                  if(temp_image[x+i][y-6] == 1 || temp_image[x+i][y+7] == 1 || temp_image[x-6][y+i] == 1 || temp_image[x+7][y+i] == 1) {
-                      edge++;
-                  }
+                int captureWindow = 10;
+                int edge = 1;
+                for(int i = -captureWindow/2; i <= captureWindow/2+1; i++) {  
+                  if(temp_image[x+i][y-captureWindow/2] == 1 || temp_image[x+i][y+captureWindow/2+1] == 1 || temp_image[x-captureWindow/2][y+i] == 1 || temp_image[x+captureWindow/2+1][y+i] == 1) {
+                    edge = 0;
+                    break;
+                  }  
                 }
-                if(edge == 0) {
+                
+                if (edge) {
                     cross_coordinates[x][y] = 1;
-                    for(int i = -6; i <= 7; i++) {
-                        for(int j = -6; j <= 7; j++) {
+                    for(int i = -captureWindow/2+1; i <= captureWindow/2; i++) {
+                        for(int j = -captureWindow/2+1; j <= captureWindow/2; j++) {
                             temp_image[x+i][y+j] = 0;
                         }
                     }
                 }
+                
+                
             }
         }
     }
@@ -205,16 +208,14 @@ void markCells(unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH], unsigned 
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
             if(cross_coordinates[x][y] == 1) {
-                for(int i = -5; i < 6; i++) {
-                  for (int j = -1; j <= 1; j++) {
-                    output_image[x+i][y+j][0] = 255;
-                    output_image[x+i][y+j][1] = 0;
-                    output_image[x+i][y+j][2] = 0;
+                for(int i = -8; i < 9; i++) {
+                    output_image[x+i][y][0] = 255;
+                    output_image[x+i][y][1] = 0;
+                    output_image[x+i][y][2] = 0;
 
-                    output_image[x+j][y+i][0] = 255;
-                    output_image[x+j][y+i][1] = 0;
-                    output_image[x+j][y+i][2] = 0;
-                  }
+                    output_image[x][y+i][0] = 255;
+                    output_image[x][y+i][1] = 0;
+                    output_image[x][y+i][2] = 0;
                 }
             }
         }
@@ -262,13 +263,13 @@ int main(int argc, char** argv)
 
 
   for(int i = 0; i < 15; i++) {
-    printf("%d iteration of erosion done \n", i);
+    //printf("%d iteration of erosion done \n", i);
     erosion(temp_image, eroded);
     greyToBmp(temp_image, output_image);
     write_bitmap(output_image, "erode.bmp");
-    printf("%d iteration of check image done \n", i);
+    //printf("%d iteration of check image done \n", i);
     checkImage(temp_image, cross_coordinates);
-    printf("\n");
+    //printf("\n");
   }
   
 
