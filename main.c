@@ -6,6 +6,11 @@
 #include <time.h>
 #include "cbmp.h"
 
+struct coordinates{
+    unsigned int x;
+    unsigned int y;
+};
+
 // Sites used for otsu's method:
 // https://muthu.co/otsus-method-for-image-thresholding-explained-and-implemented/
 // https://en.wikipedia.org/wiki/Otsu%27s_method
@@ -146,30 +151,7 @@ int shouldErode(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int x, int y) {
 
 }
 
-void erosion(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char eroded[BMP_WIDTH][BMP_HEIGTH]) {
-    for (int x = 0; x < BMP_WIDTH; x++) {
-        for (int y = 0; y < BMP_HEIGTH; y++) {
-            if(x == 0 || x == BMP_WIDTH-1 || y == 0 || y == BMP_HEIGTH-1) {
-                eroded[x][y] = 0;
-            } else {
-                if(temp_image[x][y] == 1) {
-                    eroded[x][y] = 1;
-                    if(shouldErode(temp_image,x,y)) {
-                        eroded[x][y] = 0;
-                    }
-                }
-            }
-
-        }
-    }
-    for(int x = 0; x < BMP_WIDTH; x++) {
-        for(int y = 0; y < BMP_HEIGTH; y++) {
-            temp_image[x][y] = eroded[x][y];
-        }
-    }
-}
-
-void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH]) {
+void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], struct coordinates cellCenters[301], unsigned int *cellCount) {
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
             if(temp_image[x][y] == 1) {
@@ -183,7 +165,12 @@ void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char c
                 }
                 
                 if (edge) {
-                    cross_coordinates[x][y] = 1;
+                    struct coordinates center;
+                    center.x = x;
+                    center.y = y;
+                    cellCenters[*cellCount] = center;
+                    *cellCount += 1;
+                    
                     for(int i = -captureWindow/2+1; i <= captureWindow/2; i++) {
                         for(int j = -captureWindow/2+1; j <= captureWindow/2; j++) {
                             temp_image[x+i][y+j] = 0;
@@ -197,7 +184,44 @@ void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char c
     }
 }
 
-void markCells(unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH], unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS]) {
+void erosion(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]) {
+    /*unsigned char **eroded;
+	eroded = calloc(BMP_WIDTH, sizeof(unsigned char*));
+	for (int i = 0; i < BMP_WIDTH; i++) {
+		eroded[i] = calloc(BMP_HEIGTH, sizeof(unsigned char*));
+	}*/
+    unsigned char eroded[BMP_WIDTH][BMP_HEIGTH];
+    unsigned int pixels = 0;
+
+    for (int x = 0; x < BMP_WIDTH; x++) {
+        for (int y = 0; y < BMP_HEIGTH; y++) {
+            if(x == 0 || x == BMP_WIDTH-1 || y == 0 || y == BMP_HEIGTH-1) {
+                eroded[x][y] = 0;
+            } else {
+                if(temp_image[x][y] == 1 && !shouldErode(temp_image,x,y)) {
+                    pixels += 1;
+                    eroded[x][y] = 1;
+                } else {
+                    eroded[x][y] = 0;
+                }
+            }
+
+        }
+    }
+
+    for(int x = 0; x < BMP_WIDTH; x++) {
+        for(int y = 0; y < BMP_HEIGTH; y++) {
+            temp_image[x][y] = eroded[x][y];
+        }
+    }
+    
+    // Need to fix cellcount since it is created in main
+    //checkImage(eroded, cellCenters, cellCount);
+    //if (pixels > 0) erosion(eroded, cellCenters, cellCount);
+
+}
+
+void markCells(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], struct coordinates cellCenters[301], unsigned int cellCount) {
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
             for(int c = 0; c < BMP_CHANNELS; c++) {
@@ -205,19 +229,19 @@ void markCells(unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH], unsigned 
             }
         }
     }
-    for(int x = 0; x < BMP_WIDTH; x++) {
-        for(int y = 0; y < BMP_HEIGTH; y++) {
-            if(cross_coordinates[x][y] == 1) {
-                for(int i = -8; i < 9; i++) {
-                    output_image[x+i][y][0] = 255;
-                    output_image[x+i][y][1] = 0;
-                    output_image[x+i][y][2] = 0;
 
-                    output_image[x][y+i][0] = 255;
-                    output_image[x][y+i][1] = 0;
-                    output_image[x][y+i][2] = 0;
-                }
-            }
+    for(int i = 0; i < cellCount; i++) {
+        int x = cellCenters[i].x;
+        int y = cellCenters[i].y;
+        for(int j = -8; j < 9; j++) {
+            if (x+j < 0 || x+j >= BMP_HEIGTH || y+j < 0 || y+j >= BMP_HEIGTH) continue;
+            output_image[x+j][y][0] = 255;
+            output_image[x+j][y][1] = 0;
+            output_image[x+j][y][2] = 0;
+
+            output_image[x][y+j][0] = 255;
+            output_image[x][y+j][1] = 0;
+            output_image[x][y+j][2] = 0;
         }
     }
 }
@@ -226,70 +250,57 @@ void markCells(unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH], unsigned 
 unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS];
 unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS];
 unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH];
-unsigned char cross_coordinates[BMP_WIDTH][BMP_HEIGTH];
-unsigned char eroded[BMP_WIDTH][BMP_HEIGTH];
-unsigned char circleArr[BMP_WIDTH][BMP_HEIGTH];
+struct coordinates cellCenters[301];
 
 //Main function
-int main(int argc, char** argv)
-{
-  //argc counts how may arguments are passed
-  //argv[0] is a string with the name of the program
-  //argv[1] is the first command line argument (input image)
-  //argv[2] is the second command line argument (output image)
+int main(int argc, char** argv) {
+    //argc counts how may arguments are passed
+    //argv[0] is a string with the name of the program
+    //argv[1] is the first command line argument (input image)
+    //argv[2] is the second command line argument (output image)
 
-  clock_t start, end;
-  double cpu_time_used;
-  start = clock();
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
 
-  //Checking that 2 arguments are passed
-  if (argc != 3)
-  {
-      fprintf(stderr, "Usage: %s <output file path> <output file path>\n", argv[0]);
-      exit(1);
-  }
-
-  //Load image from file
-  read_bitmap(argv[1], input_image);
-
-  //Run inversion
-  binary(input_image,temp_image);
-
-  greyToBmp(temp_image, output_image);
-
-  write_bitmap(output_image, "grayscaleTest.bmp");
-
-  char str[20];
-
-
-  for(int i = 0; i < 15; i++) {
-    //printf("%d iteration of erosion done \n", i);
-    erosion(temp_image, eroded);
-    greyToBmp(temp_image, output_image);
-    write_bitmap(output_image, "erode.bmp");
-    //printf("%d iteration of check image done \n", i);
-    checkImage(temp_image, cross_coordinates);
-    //printf("\n");
-  }
-  
-
-int count = 0;
-for(int x = 0; x < BMP_WIDTH; x++) {
-    for(int y = 0; y < BMP_HEIGTH; y++) {
-        if(cross_coordinates[x][y] == 1) {
-            count++;
-        }
+    //Checking that 2 arguments are passed
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <output file path> <output file path>\n", argv[0]);
+        exit(1);
     }
-}
-printf("Amount of detected cells: %d \n", count);
 
- markCells(cross_coordinates, input_image, output_image);
+    //Load image from file
+    read_bitmap(argv[1], input_image);
 
-  //Save image to file
-  write_bitmap(output_image, argv[2]);
+    //Run inversion
+    binary(input_image,temp_image);
 
-end = clock();
-cpu_time_used = end - start;
-printf("Total time: %f ms\n", cpu_time_used * 1000.0 /CLOCKS_PER_SEC);
-  return 0;
+    greyToBmp(temp_image, output_image);
+
+    write_bitmap(output_image, "grayscaleTest.bmp");
+    //erosion(temp_image, cellCenters, &cellCount);
+    unsigned int cellCount = 0;
+
+    for(int i = 0; i < 15; i++) {
+        erosion(temp_image);
+        greyToBmp(temp_image, output_image);
+        write_bitmap(output_image, "erode.bmp");
+        checkImage(temp_image, cellCenters, &cellCount);
+    }
+
+    //for (int i = 0; i < cellCount; i++) {
+    //  printf("cellCenters[%i] = (%i, %i)\n", i, cellCenters[i].x, cellCenters[i].y);
+    //}
+    
+    printf("Amount of detected cells: %i \n", cellCount);
+
+    markCells(input_image, output_image, cellCenters, cellCount);
+
+    //Save image to file
+    write_bitmap(output_image, argv[2]);
+
+    end = clock();
+    cpu_time_used = end - start;
+    printf("Total time: %f ms\n", cpu_time_used * 1000.0 /CLOCKS_PER_SEC);
+    return 0;
 }
