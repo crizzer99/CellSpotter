@@ -87,6 +87,7 @@ float otsu(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int startX, int star
 
 }
 
+// Function which draws the smaller parts of the image in binary
 void loadParts(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int startX, int startY, int resolution, int thresh) {
     for (int x = startX; x < startX+resolution; x++) {
         for (int y = startY; y < startY+resolution; y++) {
@@ -101,19 +102,19 @@ void loadParts(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int startX, int 
 }
 
 
-//Function to invert pixels of an image (negative)
+//Function to create the binary image (black and white)
 void binary(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]) {
 
-    // greyscale
+    // greyscale image
     for (int x = 0; x < BMP_WIDTH; x++) {
         for (int y = 0; y < BMP_HEIGTH; y++) {
             temp_image[x][y] = (input_image[x][y][0] + input_image[x][y][1] + input_image[x][y][2])/3;
         }
     }
 
-    // Binary
+    // Binary image
     // the actual amount of parts is parts^2, since parts is the amount of parts each dimension is split into
-    int parts = 4;
+    int parts = 2;
     int resolution = BMP_HEIGTH/parts;
     for (int i = 0; i < parts; i++) {
         for (int j = 0; j < parts; j++) {
@@ -125,6 +126,7 @@ void binary(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsi
     
 }
 
+// Takes the binary image and translates to black and white .bmp file
 void greyToBmp(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS]) {
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
@@ -141,21 +143,28 @@ void greyToBmp(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char ou
     }
 }
 
+// Helper function to erosion used to determine whether pixel should erode
 int shouldErode(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int x, int y) {
-  for (int i = -1; i <= 1; i++) {
-    if (temp_image[x][y+i] == 0) return 1;
-    if (temp_image[x+i][y] == 0) return 1;
-    if (temp_image[x+i][y+i] == 0) return 1;
-    return 0;
-  }
+    // Plus sign
+    //if (temp_image[x][y+1] == 0) return 1;
+    if (temp_image[x][y-1] == 0) return 1;
+    if (temp_image[x-1][y] == 0) return 1;
+    //if (temp_image[x+1][y] == 0) return 1;
 
+    // X sign
+    //if (temp_image[x+1][y+1] == 0) return 1;
+    //if (temp_image[x+1][y-1] == 0) return 1;
+    //if (temp_image[x-1][y+1] == 0) return 1;
+    if (temp_image[x-1][y-1] == 0) return 1;
+    return 0;
 }
 
+// Looks through the binary image to see spot cells
 void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], struct coordinates cellCenters[301], unsigned int *cellCount) {
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
             if(temp_image[x][y] == 1) {
-                int captureWindow = 10;
+                int captureWindow = 16;
                 int edge = 1;
                 for(int i = -captureWindow/2; i <= captureWindow/2+1; i++) {  
                   if(temp_image[x+i][y-captureWindow/2] == 1 || temp_image[x+i][y+captureWindow/2+1] == 1 || temp_image[x-captureWindow/2][y+i] == 1 || temp_image[x+captureWindow/2+1][y+i] == 1) {
@@ -166,8 +175,8 @@ void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], struct coordina
                 
                 if (edge) {
                     struct coordinates center;
-                    center.x = x;
-                    center.y = y;
+                    center.x = x-2;
+                    center.y = y-2;
                     cellCenters[*cellCount] = center;
                     *cellCount += 1;
                     
@@ -184,14 +193,15 @@ void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], struct coordina
     }
 }
 
-void erosion(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]) {
+// Performs the erosion algorithm which erodes pixels at the edge of a cell
+void erosion(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned int *pixelsLeft) {
     /*unsigned char **eroded;
 	eroded = calloc(BMP_WIDTH, sizeof(unsigned char*));
 	for (int i = 0; i < BMP_WIDTH; i++) {
 		eroded[i] = calloc(BMP_HEIGTH, sizeof(unsigned char*));
 	}*/
     unsigned char eroded[BMP_WIDTH][BMP_HEIGTH];
-    unsigned int pixels = 0;
+    *pixelsLeft = 0;
 
     for (int x = 0; x < BMP_WIDTH; x++) {
         for (int y = 0; y < BMP_HEIGTH; y++) {
@@ -199,7 +209,7 @@ void erosion(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]) {
                 eroded[x][y] = 0;
             } else {
                 if(temp_image[x][y] == 1 && !shouldErode(temp_image,x,y)) {
-                    pixels += 1;
+                    *pixelsLeft += 1;
                     eroded[x][y] = 1;
                 } else {
                     eroded[x][y] = 0;
@@ -214,14 +224,12 @@ void erosion(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]) {
             temp_image[x][y] = eroded[x][y];
         }
     }
-    
-    // Need to fix cellcount since it is created in main
-    //checkImage(eroded, cellCenters, cellCount);
-    //if (pixels > 0) erosion(eroded, cellCenters, cellCount);
 
 }
 
+// Function that marks the cells in the image
 void markCells(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], struct coordinates cellCenters[301], unsigned int cellCount) {
+    // Sets the output image equal to the input
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
             for(int c = 0; c < BMP_CHANNELS; c++) {
@@ -230,6 +238,7 @@ void markCells(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], u
         }
     }
 
+    // Overwrites the input image with red crosses
     for(int i = 0; i < cellCount; i++) {
         int x = cellCenters[i].x;
         int y = cellCenters[i].y;
@@ -271,22 +280,24 @@ int main(int argc, char** argv) {
 
     //Load image from file
     read_bitmap(argv[1], input_image);
-
-    //Run inversion
+    // Translate 3d bmp to 2d binary image
     binary(input_image,temp_image);
 
     greyToBmp(temp_image, output_image);
-
+    // create a .bmp of the binary image
     write_bitmap(output_image, "grayscaleTest.bmp");
-    //erosion(temp_image, cellCenters, &cellCount);
+    // Counts amount of cells registered
     unsigned int cellCount = 0;
+    // Counts if any pixels are left to erode
+    unsigned int pixelsLeft = 0;
 
-    for(int i = 0; i < 15; i++) {
-        erosion(temp_image);
+    // While loop that erodes until fully eroded
+    do {
+        erosion(temp_image, &pixelsLeft);
         greyToBmp(temp_image, output_image);
         write_bitmap(output_image, "erode.bmp");
         checkImage(temp_image, cellCenters, &cellCount);
-    }
+    } while (pixelsLeft > 0);
 
     //for (int i = 0; i < cellCount; i++) {
     //  printf("cellCenters[%i] = (%i, %i)\n", i, cellCenters[i].x, cellCenters[i].y);
@@ -294,6 +305,7 @@ int main(int argc, char** argv) {
     
     printf("Amount of detected cells: %i \n", cellCount);
 
+    // Marks cells with red crosses
     markCells(input_image, output_image, cellCenters, cellCount);
 
     //Save image to file
