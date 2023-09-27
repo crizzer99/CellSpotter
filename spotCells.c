@@ -1,7 +1,6 @@
 // spotCells.c
 #include <stdlib.h>
 #include <stdio.h>
-// #include <time.h>
 #include "spotCells.h"
 
 #define CAPTURE_WINDOW_SIZE 16
@@ -43,7 +42,7 @@ void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], coordinates_t c
 
 
 // Function that marks the cells in the image
-void markCells(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], coordinates_t cellCenters[301], unsigned int cellCount) {
+void markCells(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], coordinates_t cellCenters[301], unsigned int cellCount, char * output_file_path) {
     // Sets the output image equal to the input
     for(int x = 0; x < BMP_WIDTH; x++) {
         for(int y = 0; y < BMP_HEIGTH; y++) {
@@ -68,4 +67,7 @@ void markCells(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], u
             output_image[x][y+j][2] = 0;
         }
     }
+
+    // creates a .bmp of the
+    write_bitmap(output_image, output_file_path);
 }

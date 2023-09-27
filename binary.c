@@ -1,7 +1,6 @@
 // binary.c
 #include <stdlib.h>
 #include <stdio.h>
-// #include <time.h>
 #include "binary.h"
 
 // Function which draws the smaller parts of the image in binary
@@ -18,8 +17,30 @@ void loadParts(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int startX, int 
     }
 }
 
+// Takes the binary image and translates to black and white .bmp file
+void toBmp(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], char * output_file_path) {
+    for(int x = 0; x < BMP_WIDTH; x++) {
+        for(int y = 0; y < BMP_HEIGTH; y++) {
+            if(temp_image[x][y] == 1) {
+                output_image[x][y][0] = 255;
+                output_image[x][y][1] = 255;
+                output_image[x][y][2] = 255;
+            } else {
+                output_image[x][y][0] = 0;
+                output_image[x][y][1] = 0;
+                output_image[x][y][2] = 0;
+            }
+        }
+    }
+    // creates a .bmp of the binary image
+    write_bitmap(output_image, output_file_path);
+}
+
 //Function to create the binary image (black and white)
-void binary(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]) {
+void binary(char * input_file_path, unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH]) {
+
+    //Load image from file
+    read_bitmap(input_file_path, input_image);
 
     // greyscale image
     for (int x = 0; x < BMP_WIDTH; x++) {
@@ -38,22 +59,7 @@ void binary(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsi
             //printf("Thresh: %i for pixels [%i;%i] x [%i;%i]\n", thresh, i*resolution, i*resolution+resolution, j*resolution, j*resolution+resolution);
             loadParts(temp_image, i*resolution, j*resolution, resolution, thresh);
         }    
-    }  
+    } 
+     
 }
 
-// Takes the binary image and translates to black and white .bmp file
-void greyToBmp(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS]) {
-    for(int x = 0; x < BMP_WIDTH; x++) {
-        for(int y = 0; y < BMP_HEIGTH; y++) {
-            if(temp_image[x][y] == 1) {
-                output_image[x][y][0] = 255;
-                output_image[x][y][1] = 255;
-                output_image[x][y][2] = 255;
-            } else {
-                output_image[x][y][0] = 0;
-                output_image[x][y][1] = 0;
-                output_image[x][y][2] = 0;
-            }
-        }
-    }
-}

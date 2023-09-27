@@ -41,7 +41,6 @@ void erosion(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned int *pixe
                     eroded[x][y] = 0;
                 }
             }
-
         }
     }
 

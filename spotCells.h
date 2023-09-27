@@ -12,7 +12,7 @@ typedef struct{
 
 
 void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], coordinates_t cellCenters[301], unsigned int *cellCount);
-void markCells(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], coordinates_t cellCenters[301], unsigned int cellCount);
+void markCells(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], coordinates_t cellCenters[301], unsigned int cellCount, char * output_file_path);
 
 
 #endif /* SPOTCELLS_H_ */
