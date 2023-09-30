@@ -11,9 +11,6 @@ struct coordinates{
     unsigned int y;
 };
 
-// Sites used for otsu's method:
-// https://muthu.co/otsus-method-for-image-thresholding-explained-and-implemented/
-// https://en.wikipedia.org/wiki/Otsu%27s_method
 // Function which finds best threshold value
 float otsu(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int startX, int startY, int resolution) {
     
@@ -124,6 +121,7 @@ void binary(unsigned char input_image[BMP_WIDTH][BMP_HEIGTH][BMP_CHANNELS], unsi
         }    
     }
     
+    
 }
 
 // Takes the binary image and translates to black and white .bmp file
@@ -146,15 +144,15 @@ void greyToBmp(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], unsigned char ou
 // Helper function to erosion used to determine whether pixel should erode
 int shouldErode(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], int x, int y) {
     // Plus sign
-    //if (temp_image[x][y+1] == 0) return 1;
+    if (temp_image[x][y+1] == 0) return 1;
     if (temp_image[x][y-1] == 0) return 1;
     if (temp_image[x-1][y] == 0) return 1;
-    //if (temp_image[x+1][y] == 0) return 1;
+    if (temp_image[x+1][y] == 0) return 1;
 
     // X sign
-    //if (temp_image[x+1][y+1] == 0) return 1;
-    //if (temp_image[x+1][y-1] == 0) return 1;
-    //if (temp_image[x-1][y+1] == 0) return 1;
+    if (temp_image[x+1][y+1] == 0) return 1;
+    if (temp_image[x+1][y-1] == 0) return 1;
+    if (temp_image[x-1][y+1] == 0) return 1;
     if (temp_image[x-1][y-1] == 0) return 1;
     return 0;
 }
@@ -175,8 +173,8 @@ void checkImage(unsigned char temp_image[BMP_WIDTH][BMP_HEIGTH], struct coordina
                 
                 if (edge) {
                     struct coordinates center;
-                    center.x = x-2;
-                    center.y = y-2;
+                    center.x = x;
+                    center.y = y;
                     cellCenters[*cellCount] = center;
                     *cellCount += 1;
                     
@@ -294,14 +292,12 @@ int main(int argc, char** argv) {
     // While loop that erodes until fully eroded
     do {
         erosion(temp_image, &pixelsLeft);
-        greyToBmp(temp_image, output_image);
-        write_bitmap(output_image, "erode.bmp");
         checkImage(temp_image, cellCenters, &cellCount);
     } while (pixelsLeft > 0);
 
-    //for (int i = 0; i < cellCount; i++) {
-    //  printf("cellCenters[%i] = (%i, %i)\n", i, cellCenters[i].x, cellCenters[i].y);
-    //}
+    for (int i = 0; i < cellCount; i++) {
+      printf("cellCenters[%i] = (%i, %i)\n", i, cellCenters[i].x, cellCenters[i].y);
+    }
     
     printf("Amount of detected cells: %i \n", cellCount);
 
