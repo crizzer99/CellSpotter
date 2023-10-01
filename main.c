@@ -49,13 +49,12 @@ int main(int argc, char** argv) {
     // While loop that erodes until fully eroded
     do {
         erosion(temp_image, &pixelsLeft);
-        toBmp(temp_image, output_image, "erode.bmp");
         checkImage(temp_image, cellCenters, &cellCount);
     } while (pixelsLeft > 0);
 
-    //for (int i = 0; i < cellCount; i++) {
-    //  printf("cellCenters[%i] = (%i, %i)\n", i, cellCenters[i].x, cellCenters[i].y);
-    //}
+    for (int i = 0; i < cellCount; i++) {
+      printf("cellCenters[%i] = (%i, %i)\n", i, cellCenters[i].x, cellCenters[i].y);
+    }
     
     printf("Amount of detected cells: %i \n", cellCount);
 
